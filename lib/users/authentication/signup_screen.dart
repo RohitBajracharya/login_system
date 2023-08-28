@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:shop_app/api_connection/api_connection.dart';
 import 'package:shop_app/users/authentication/login_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:shop_app/users/model/user.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -20,24 +21,52 @@ class _SignUpScreenState extends State<SignUpScreen> {
   var passwordController = TextEditingController();
   var isObsecure = true.obs;
 
-  validateUserEmai() async{
+  validateUserEmail() async {
     try {
-      var res=await http.post(
+      var res = await http.post(
         Uri.parse(API.validateEmail),
         body: {
-          'user_email':emailController.text.trim(),
+          'user_email': emailController.text.trim(),
         },
       );
-      if(res.statusCode == 200){
-        var resBody=jsonDecode(res.body);
-        if(resBody['emailFound']==true){
+      if (res.statusCode == 200) {
+        var resBody = jsonDecode(res.body);
+        if (resBody['emailFound'] == true) {
           Get.snackbar("Email Error", "Email Already Exist. Try another email");
-        }else{
-          
+        } else {
+          registerAndSaveUserRecord();
         }
       }
     } catch (e) {
-      
+      print(e.toString());
+      Get.snackbar("Validation ERROR", e.toString());
+    }
+  }
+
+  registerAndSaveUserRecord() async {
+    User userModel = User(
+      1,
+      nameController.text.trim(),
+      emailController.text.trim(),
+      passwordController.text.trim(),
+    );
+
+    try {
+      var res = await http.post(
+        Uri.parse(API.signUp),
+        body: userModel.toJson(),
+      );
+
+      if (res.statusCode == 200) {
+        var resBody = jsonDecode(res.body);
+        if (resBody['success'] == true) {
+          Get.snackbar("Signup Message", "User Created Successfully");
+        } else {
+          Get.snackbar("Signup Message", "Failed to Create User. Try Again...");
+        }
+      }
+    } catch (e) {
+      Get.snackbar("Signup ERROR", e.toString());
     }
   }
 
@@ -257,9 +286,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       borderRadius: BorderRadius.circular(30),
                                       child: InkWell(
                                         onTap: () {
-                                          if(formKey.currentState!.validate()){
-                                           //validate email 
-                                           validateUserEmail
+                                          if (formKey.currentState!
+                                              .validate()) {
+                                            //validate email
+                                            validateUserEmail();
                                           }
                                         },
                                         borderRadius: BorderRadius.circular(30),

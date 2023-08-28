@@ -1,6 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shop_app/api_connection/api_connection.dart';
 import 'package:shop_app/users/authentication/signup_screen.dart';
+import 'package:http/http.dart' as http;
+import 'package:shop_app/users/model/user.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +19,25 @@ class _LoginScreenState extends State<LoginScreen> {
   var emailController = TextEditingController();
   var passwordController = TextEditingController();
   var isObsecure = true.obs;
+
+  loginUserNow() async {
+    var res = await http.post(
+      Uri.parse(API.login),
+      body: {
+        'user_email': emailController.text.trim(),
+        'user_password': passwordController.text.trim(),
+      },
+    );
+    if (res.statusCode == 200) {
+      var resBody = jsonDecode(res.body);
+      if (resBody['success'] == true) {
+        Get.snackbar("Login", "You are logged in");
+        User userInfo = User.fromJson(resBody["userData"]);
+      } else {
+        Get.snackbar("Login Error", "Wrong Email or Password");
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +206,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       color: Colors.black,
                                       borderRadius: BorderRadius.circular(30),
                                       child: InkWell(
-                                        onTap: () {},
+                                        onTap: () {
+                                          loginUserNow();
+                                        },
                                         borderRadius: BorderRadius.circular(30),
                                         child: const Padding(
                                           padding: EdgeInsets.symmetric(
