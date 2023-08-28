@@ -3,39 +3,70 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shop_app/api_connection/api_connection.dart';
-import 'package:shop_app/users/authentication/signup_screen.dart';
+import 'package:shop_app/users/authentication/login_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:shop_app/users/model/user.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignUpScreenState extends State<SignUpScreen> {
   var formKey = GlobalKey<FormState>();
+  var nameController = TextEditingController();
   var emailController = TextEditingController();
   var passwordController = TextEditingController();
   var isObsecure = true.obs;
 
-  loginUserNow() async {
-    var res = await http.post(
-      Uri.parse(API.login),
-      body: {
-        'user_email': emailController.text.trim(),
-        'user_password': passwordController.text.trim(),
-      },
-    );
-    if (res.statusCode == 200) {
-      var resBody = jsonDecode(res.body);
-      if (resBody['success'] == true) {
-        Get.snackbar("Login", "You are logged in");
-        User userInfo = User.fromJson(resBody["userData"]);
-      } else {
-        Get.snackbar("Login Error", "Wrong Email or Password");
+  validateUserEmail() async {
+    try {
+      var res = await http.post(
+        Uri.parse(API.validateEmail),
+        body: {
+          'user_email': emailController.text.trim(),
+        },
+      );
+      if (res.statusCode == 200) {
+        var resBody = jsonDecode(res.body);
+        if (resBody['emailFound'] == true) {
+          Get.snackbar("Email Error", "Email Already Exist. Try another email");
+        } else {
+          registerAndSaveUserRecord();
+        }
       }
+    } catch (e) {
+      print(e.toString());
+      Get.snackbar("Validation ERROR", e.toString());
+    }
+  }
+
+  registerAndSaveUserRecord() async {
+    User userModel = User(
+      1,
+      nameController.text.trim(),
+      emailController.text.trim(),
+      passwordController.text.trim(),
+    );
+
+    try {
+      var res = await http.post(
+        Uri.parse(API.signUp),
+        body: userModel.toJson(),
+      );
+
+      if (res.statusCode == 200) {
+        var resBody = jsonDecode(res.body);
+        if (resBody['success'] == true) {
+          Get.snackbar("Signup Message", "User Created Successfully");
+        } else {
+          Get.snackbar("Signup Message", "Failed to Create User. Try Again...");
+        }
+      }
+    } catch (e) {
+      Get.snackbar("Signup ERROR", e.toString());
     }
   }
 
@@ -53,13 +84,13 @@ class _LoginScreenState extends State<LoginScreen> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    //login screen header
+                    //signup screen header
                     Container(
                       width: Get.width,
                       height: Get.height * .3,
-                      child: Image.asset("images/login.jpg"),
+                      child: Image.asset("images/register.jpg"),
                     ),
-                    //sign-in form
+                    //sign-up form
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Container(
@@ -80,11 +111,59 @@ class _LoginScreenState extends State<LoginScreen> {
                           padding: const EdgeInsets.fromLTRB(30, 30, 30, 8.0),
                           child: Column(
                             children: [
-                              //login form
+                              //signup form-name|email|password
                               Form(
                                 key: formKey,
                                 child: Column(
                                   children: [
+                                    //name field
+                                    TextFormField(
+                                      controller: nameController,
+                                      validator: (value) => value == ''
+                                          ? "Please enter name"
+                                          : null,
+                                      decoration: InputDecoration(
+                                        prefixIcon: const Icon(Icons.person),
+                                        iconColor: Colors.black,
+                                        hintText: "Name",
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(30),
+                                          borderSide: const BorderSide(
+                                            color: Colors.white60,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(30),
+                                          borderSide: const BorderSide(
+                                            color: Colors.white60,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(30),
+                                          borderSide: const BorderSide(
+                                            color: Colors.white60,
+                                          ),
+                                        ),
+                                        disabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(30),
+                                          borderSide: const BorderSide(
+                                            color: Colors.white60,
+                                          ),
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 6,
+                                        ),
+                                        fillColor: Colors.white,
+                                        filled: true,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 18),
                                     //email field
                                     TextFormField(
                                       controller: emailController,
@@ -201,13 +280,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
 
                                     const SizedBox(height: 18),
-                                    //login button
+                                    //signup button
                                     Material(
                                       color: Colors.black,
                                       borderRadius: BorderRadius.circular(30),
                                       child: InkWell(
                                         onTap: () {
-                                          loginUserNow();
+                                          if (formKey.currentState!
+                                              .validate()) {
+                                            //validate email
+                                            validateUserEmail();
+                                          }
                                         },
                                         borderRadius: BorderRadius.circular(30),
                                         child: const Padding(
@@ -216,7 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             horizontal: 28,
                                           ),
                                           child: Text(
-                                            "Login",
+                                            "Sign Up",
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 16,
@@ -230,12 +313,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
 
                               const SizedBox(height: 16),
-                              //"dont have an account"-Text and signup-TextButton
+                              //"alreadt have an account"-Text and Login-TextButton
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   const Text(
-                                    "Don't have an Account?",
+                                    "Already have an Account?",
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.white,
@@ -243,10 +326,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   TextButton(
                                     onPressed: () {
-                                      Get.to(SignUpScreen());
+                                      Get.to(LoginScreen());
                                     },
                                     child: const Text(
-                                      "Sign up",
+                                      "Login",
                                       style: TextStyle(
                                         color: Colors.red,
                                         fontSize: 16,
@@ -255,38 +338,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ],
                               ),
-
-                              const Text(
-                                "Or",
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 16,
-                                ),
-                              ),
-
-                              //"Are you an Admin"-Text and signup-TextButton
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Text(
-                                    "Are you an Admin?",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {},
-                                    child: const Text(
-                                      "Sign in as Admin",
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
                             ],
                           ),
                         ),
