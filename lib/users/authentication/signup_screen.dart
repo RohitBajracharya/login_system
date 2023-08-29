@@ -38,7 +38,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         }
       }
     } catch (e) {
-      print(e.toString());
       Get.snackbar("Validation ERROR", e.toString());
     }
   }

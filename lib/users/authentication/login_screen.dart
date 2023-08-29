@@ -5,7 +5,9 @@ import 'package:get/get.dart';
 import 'package:shop_app/api_connection/api_connection.dart';
 import 'package:shop_app/users/authentication/signup_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:shop_app/users/fragments/dashboard_of_fragments.dart';
 import 'package:shop_app/users/model/user.dart';
+import 'package:shop_app/users/userPreferences/user_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,21 +23,34 @@ class _LoginScreenState extends State<LoginScreen> {
   var isObsecure = true.obs;
 
   loginUserNow() async {
-    var res = await http.post(
-      Uri.parse(API.login),
-      body: {
-        'user_email': emailController.text.trim(),
-        'user_password': passwordController.text.trim(),
-      },
-    );
-    if (res.statusCode == 200) {
-      var resBody = jsonDecode(res.body);
-      if (resBody['success'] == true) {
-        Get.snackbar("Login", "You are logged in");
-        User userInfo = User.fromJson(resBody["userData"]);
-      } else {
-        Get.snackbar("Login Error", "Wrong Email or Password");
+    try {
+      var res = await http.post(
+        Uri.parse(API.login),
+        body: {
+          'user_email': emailController.text.trim(),
+          'user_password': passwordController.text.trim(),
+        },
+      );
+      if (res.statusCode == 200) {
+        var resBody = jsonDecode(res.body);
+        if (resBody['success'] == true) {
+          Get.snackbar("Login", "You are logged in");
+          User userInfo = User.fromJson(resBody["userData"]);
+
+          //save userInfo to local Storage using Shared Preferences
+          await RememberUserPrefs.saveRememberUser(userInfo);
+          Future.delayed(
+            const Duration(milliseconds: 2000),
+            () {
+              Get.to(const DashboardOfFragmetns());
+            },
+          );
+        } else {
+          Get.snackbar("Login Error", "Wrong Email or Password");
+        }
       }
+    } catch (e) {
+      Get.snackbar("Login Error", e.toString());
     }
   }
 
@@ -207,7 +222,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                       borderRadius: BorderRadius.circular(30),
                                       child: InkWell(
                                         onTap: () {
-                                          loginUserNow();
+                                          if (formKey.currentState!
+                                              .validate()) {
+                                            loginUserNow();
+                                          }
                                         },
                                         borderRadius: BorderRadius.circular(30),
                                         child: const Padding(
@@ -243,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   TextButton(
                                     onPressed: () {
-                                      Get.to(SignUpScreen());
+                                      Get.to(const SignUpScreen());
                                     },
                                     child: const Text(
                                       "Sign up",
